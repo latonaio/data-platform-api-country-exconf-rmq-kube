@@ -4,10 +4,12 @@ import (
 	"context"
 	dpfm_api_input_reader "data-platform-api-country-exconf-rmq-kube/DPFM_API_Input_Reader"
 	dpfm_api_output_formatter "data-platform-api-country-exconf-rmq-kube/DPFM_API_Output_Formatter"
-	"data-platform-api-country-exconf-rmq-kube/database"
-	"sync"
+	"encoding/json"
 
 	"github.com/latonaio/golang-logging-library-for-data-platform/logger"
+	database "github.com/latonaio/golang-mysql-network-connector"
+	rabbitmq "github.com/latonaio/rabbitmq-golang-client-for-data-platform"
+	"golang.org/x/xerrors"
 )
 
 type ExistenceConf struct {
@@ -24,61 +26,55 @@ func NewExistenceConf(ctx context.Context, db *database.Mysql, l *logger.Logger)
 	}
 }
 
-func (e *ExistenceConf) Conf(input *dpfm_api_input_reader.SDC) *dpfm_api_output_formatter.Country {
-	country := *input.Country.Country
-	notKeyExistence := make([]string, 0, 1)
-	KeyExistence := make([]string, 0, 1)
+func (e *ExistenceConf) Conf(msg rabbitmq.RabbitmqMessage) interface{} {
+	var ret interface{}
+	ret = map[string]interface{}{
+		"ExistenceConf": false,
+	}
+	input := make(map[string]interface{})
+	err := json.Unmarshal(msg.Raw(), &input)
+	if err != nil {
+		return ret
+	}
 
-	existData := &dpfm_api_output_formatter.Country{
-		Country:       country,
+	_, ok := input["Country"]
+	if ok {
+		input := &dpfm_api_input_reader.SDC{}
+		err = json.Unmarshal(msg.Raw(), input)
+		ret = e.confCountry(input)
+		goto endProcess
+	}
+
+	err = xerrors.Errorf("can not get exconf check target")
+endProcess:
+	if err != nil {
+		e.l.Error(err)
+	}
+	return ret
+}
+
+func (e *ExistenceConf) confCountry(input *dpfm_api_input_reader.SDC) *dpfm_api_output_formatter.Country {
+	exconf := dpfm_api_output_formatter.Country{
+		ExistenceConf: false,
+	}
+	if input.Country.Country == nil {
+		return &exconf
+	}
+	exconf = dpfm_api_output_formatter.Country{
+		Country:       *input.Country.Country,
 		ExistenceConf: false,
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if !e.confCountry(country) {
-			notKeyExistence = append(notKeyExistence, country)
-			return
-		}
-		KeyExistence = append(KeyExistence, country)
-	}()
-
-	wg.Wait()
-
-	if len(KeyExistence) == 0 {
-		return existData
-	}
-	if len(notKeyExistence) > 0 {
-		return existData
-	}
-
-	existData.ExistenceConf = true
-	return existData
-}
-
-func (e *ExistenceConf) confCountry(val string) bool {
 	rows, err := e.db.Query(
 		`SELECT Country 
 		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_country_country_data 
-		WHERE Country = ?;`, val,
+		WHERE Country = ?;`, exconf.Country,
 	)
 	if err != nil {
 		e.l.Error(err)
-		return false
+		return &exconf
 	}
 
-	for rows.Next() {
-		var country string
-		err := rows.Scan(&country)
-		if err != nil {
-			e.l.Error(err)
-			continue
-		}
-		if country == val {
-			return true
-		}
-	}
-	return false
+	exconf.ExistenceConf = rows.Next()
+	return &exconf
 }

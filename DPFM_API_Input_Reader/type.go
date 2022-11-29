@@ -54,19 +54,18 @@ type EC_MC struct {
 }
 
 type SDC struct {
-	ConnectionKey        string `json:"connection_key"`
-	Result               bool   `json:"result"`
-	RedisKey             string `json:"redis_key"`
-	Filepath             string `json:"filepath"`
-	APIStatusCode        int    `json:"api_status_code"`
-	RuntimeSessionID     string `json:"runtime_session_id"`
-	BusinessPartner      *int   `json:"business_partner"`
-	ServiceLabel         string `json:"service_label"`
-	Country struct {
+	ConnectionKey    string `json:"connection_key"`
+	Result           bool   `json:"result"`
+	RedisKey         string `json:"redis_key"`
+	Filepath         string `json:"filepath"`
+	APIStatusCode    int    `json:"api_status_code"`
+	RuntimeSessionID string `json:"runtime_session_id"`
+	BusinessPartner  *int   `json:"business_partner"`
+	ServiceLabel     string `json:"service_label"`
+	Country          struct {
 		Country *string `json:"Country"`
 	} `json:"Country"`
 	APISchema string   `json:"api_schema"`
 	Accepter  []string `json:"accepter"`
-	OrderID   *int     `json:"order_id"`
 	Deleted   bool     `json:"deleted"`
 }

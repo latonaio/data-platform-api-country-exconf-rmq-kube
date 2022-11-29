@@ -1,6 +1,6 @@
 package dpfm_api_output_formatter
 
-type SDC struct {
+type MetaData struct {
 	ConnectionKey     string   `json:"connection_key"`
 	Result            bool     `json:"result"`
 	RedisKey          string   `json:"redis_key"`
@@ -9,10 +9,9 @@ type SDC struct {
 	RuntimeSessionID  string   `json:"runtime_session_id"`
 	BusinessPartnerID *int     `json:"business_partner"`
 	ServiceLabel      string   `json:"service_label"`
-	Country           Country  `json:"Country"`
+	Country           *Country `json:"Country,omitempty"`
 	APISchema         string   `json:"api_schema"`
 	Accepter          []string `json:"accepter"`
-	OrderID           *int     `json:"order_id"`
 	Deleted           bool     `json:"deleted"`
 }
 
