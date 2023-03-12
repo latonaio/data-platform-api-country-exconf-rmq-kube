@@ -74,6 +74,7 @@ func (e *ExistenceConf) confCountry(input *dpfm_api_input_reader.SDC) *dpfm_api_
 		e.l.Error(err)
 		return &exconf
 	}
+	defer rows.Close()
 
 	exconf.ExistenceConf = rows.Next()
 	return &exconf
